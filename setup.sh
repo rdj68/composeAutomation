@@ -1,14 +1,13 @@
 #!/bin/bash
 
+# Install pipenv
+pip install pipenv
+
 # Create a virtual environment
-python3 -m venv venv
+pipenv install
 
 # Activate the virtual environment
-source venv/bin/activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
+pipenv shell
 
 # Display instructions for deactivating the virtual environment
 echo "Virtual environment created and activated. To deactivate the virtual environment, run: deactivate"
