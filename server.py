@@ -1,19 +1,20 @@
-from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import JSONResponse
-import subprocess
+from fastapi import FastAPI, HTTPException
 import hmac
 import hashlib
-from pydantic import BaseModel
+import os
+from schemas.webhook import WebhookResponse
+from schemas.restart import RestartResponse, RestartReq
+from controllers.dockerCompose import update_docker_compose, restart_docker_compose
+from dotenv import load_dotenv
+
 
 app = FastAPI()
 
-# Replace 'your_secret' with the secret you set in the GitHub webhook configuration
-SECRET = 'your_secret'
-DOCKER_COMPOSE_PATH = '/path/to/your/docker-compose-file.yml'
-
-# Create a Pydantic model for the response
-class WebhookResponse(BaseModel):
-    message: str
+# Load env file and get the secret from the environment variable
+load_dotenv()
+SECRET = os.environ.get('WEBHOOK_SECRET')
+RESTART_SECRET = os.environ.get('RESTART_SECRET')
+DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
 
 @app.post('/webhook', response_model=WebhookResponse)
 async def webhook(request_data: dict):
@@ -23,17 +24,25 @@ async def webhook(request_data: dict):
 
     # Check if the event is a push to the main branch
     if is_main_branch_push(request_data):
-        commit_hash = request_data['after']  # Extract commit hash
+        commit_hash_after = request_data['after']  # Extract commit hash
+        commit_hash_before = request_data['before']  # Extract commit hash
 
-        # Update Docker Compose file with the commit hash
-        # update_docker_compose(commit_hash)
-
-        # Return a response using the Pydantic model
+        #Update Docker Compose file with the commit hash
+        update_docker_compose(commit_hash_after, commit_hash_before)
         return WebhookResponse(message='Docker Compose file updated successfully')
 
     # Return a response using the Pydantic model
     return WebhookResponse(message='No action taken')
 
+@app.post('/restart', response_model=RestartResponse)
+async def restart(req: RestartReq):
+    # Check if the secret is correct
+    if req.secret != RESTART_SECRET:
+        raise HTTPException(status_code=403, detail='Invalid secret')
+
+    # Restart the Docker Compose services
+    restart_docker_compose()
+    return RestartResponse(message='Docker Compose services restarted successfully', success=True)
 
 def is_main_branch_push(payload):
     return payload['ref'] == 'refs/heads/main' and payload['after']
@@ -47,26 +56,6 @@ def is_valid_signature(data, signature):
 
     return hmac.compare_digest(signature, expected_signature)
 
-# def update_docker_compose(commit_hash):
-#     try:
-#         # Read the current Docker Compose file content
-#         with open(DOCKER_COMPOSE_PATH, 'r') as f:
-#             docker_compose_content = f.read()
-
-#         # Append the commit hash to a specific location in the file
-#         updated_content = docker_compose_content + f'\n# Updated commit hash: {commit_hash}'
-
-#         # Write the updated content back to the Docker Compose file
-#         with open(DOCKER_COMPOSE_PATH, 'w') as f:
-#             f.write(updated_content)
-
-#         # Commit and push the changes to the repository
-#         subprocess.run(['git', 'add', DOCKER_COMPOSE_PATH])
-#         subprocess.run(['git', 'commit', '-m', 'Update Docker Compose with latest commit hash'])
-#         subprocess.run(['git', 'push', 'origin', 'main'])
-
-#     except Exception as e:
-#         print(f'Error updating Docker Compose file: {e}')
 
 if __name__ == '__main__':
     import uvicorn
