@@ -18,7 +18,7 @@ def update_docker_compose(commit_hash_after, commit_hash_before, docker_compose_
 def restart_docker_compose(docker_compose_path):
     try:
         # Restart the Docker Compose services
-        subprocess.run(['docker-compose', '-f', docker_compose_path, 'up', '-d'], check=True)
+        subprocess.run(['docker', 'compose', '-f', docker_compose_path, 'up', '-d'], check=True)
     except Exception as e:
         print(f'Error restarting Docker Compose: {e}')
         
