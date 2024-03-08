@@ -36,6 +36,8 @@ async def webhook(request: Request):
         signature = request.headers.get('X-Hub-Signature')
         print(signature)
         body = await request.body()
+        print(body)
+        print ("body received", request)
         payload = json.loads(body.decode())
         print ("payload validated")
         # Validate the GitHub webhook signature
