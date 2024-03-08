@@ -10,27 +10,33 @@ import asyncio
 from app.discordBot.discord_bot import bot, send_message_to_default_channel
 import uvicorn
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting Discord bot")
     load_dotenv()
     
+    global GUILD_NAME
+    GUILD_NAME = os.environ.get('GUILD_NAME')
+    global SECRET 
+    SECRET = os.environ.get('WEBHOOK_SECRET')
+    global DOCKER_COMPOSE_PATH
+    DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
+    global BOT_TOKEN
     BOT_TOKEN = os.environ.get('BOT_TOKEN')
+    
     asyncio.create_task(bot.start(BOT_TOKEN))
     yield
     print("Stopping Discord bot")
 
 app = FastAPI(lifespan=lifespan)
 
-SECRET = os.environ.get('WEBHOOK_SECRET')
-DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
-GUILD_NAME = os.environ.get('GUILD_NAME')
+
 
 @app.post('/webhook')
 async def webhook(request: Request,
     x_github_event: str = Header(...),
     x_hub_signature: str = Header(...)):
+    print(SECRET, DOCKER_COMPOSE_PATH, BOT_TOKEN, GUILD_NAME)
     
     if x_github_event == 'ping':
         return {'message': 'GitHub Webhook received successfully'}
@@ -72,7 +78,7 @@ def is_valid_signature(data, signature):
         return False
 
     # Calculate HMAC digest
-    hmac_digest = hmac.new(bytes(SECRET, 'utf-8'), data.encode('utf-8'), hashlib.sha1).hexdigest()
+    hmac_digest = hmac.new(bytes(SECRET, 'utf-8'), data, hashlib.sha1).hexdigest()
     expected_signature = f"sha1={hmac_digest}"
 
     return hmac.compare_digest(signature, expected_signature)
