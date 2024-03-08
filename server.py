@@ -1,17 +1,14 @@
 from contextlib import asynccontextmanager
-from urllib.parse import unquote
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Request
 import hmac
 import hashlib
 import os
 from app.schemas.webhook import WebhookResponse
 from app.controllers.dockerCompose import update_docker_compose
-from starlette.requests import Request
 from dotenv import load_dotenv
 import asyncio
 from app.discordBot.discord_bot import bot, send_message_to_default_channel
 import uvicorn
-import json
 
 
 @asynccontextmanager
@@ -31,27 +28,29 @@ DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
 GUILD_NAME = os.environ.get('GUILD_NAME')
 
 @app.post('/webhook')
-async def webhook(request: Request):
-    try:
-        # Get the GitHub webhook signature from the headers
-        signature = request.headers.get('X-Hub-Signature')
-        print(signature)
+async def webhook(request: Request,
+    x_github_event: str = Header(...),
+    x_hub_signature: str = Header(...)):
+    
+    if x_github_event == 'ping':
+        return {'message': 'GitHub Webhook received successfully'}
         
+    if x_github_event != 'push':
+        raise HTTPException(status_code=400, detail='Invalid event type')
+
+    try:
         # Decode the URL-encoded payload
         body = await request.body()
         payload = await request.json()
-        print("payload validated")
 
         # Validate the GitHub webhook signature
-        if not is_valid_signature(body, signature):
+        if not is_valid_signature(body, x_hub_signature):
             raise HTTPException(status_code=403, detail='Invalid signature')
-        print("signature validated")
 
         # Check if the event is a push to the main branch
         if is_main_branch_push(payload):
             commit_hash_after = payload['after']
             commit_hash_before = payload['before']
-            print("main branch push")
 
             # Update Docker Compose file with the commit hash
             update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
@@ -63,8 +62,11 @@ async def webhook(request: Request):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
 def is_main_branch_push(payload):
-    return (payload['ref'] == 'refs/heads/main' or payload['ref'] == 'refs/heads/master') and payload['after']
+    default_branch = payload['repository']['default_branch']
+    return "ref" in payload and  payload['ref'] == f'refs/heads/{default_branch}'
 
 def is_valid_signature(data, signature):
     if not signature:
