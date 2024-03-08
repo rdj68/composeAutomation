@@ -21,6 +21,8 @@ def update_docker_compose(commit_hash_after, commit_hash_before, docker_compose_
 def restart_docker_compose(docker_compose_path: str) -> str:
     try:
         # Restart the Docker Compose services and capture the logs
+        completed_process = subprocess.run(['docker', 'compose', '-f', docker_compose_path, 'down'], capture_output=True, text=True, check=True)
+        print(completed_process)
         completed_process = subprocess.run(['docker', 'compose', '-f', docker_compose_path, 'up', '-d'], capture_output=True, text=True, check=True)
 
         # Check if the Docker Compose services restarted properly
