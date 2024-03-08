@@ -39,8 +39,8 @@ async def webhook(request: Request):
         payload = json.loads(body.decode())
         
         # Validate the GitHub webhook signature
-        # if not is_valid_signature(body, signature):
-            # raise HTTPException(status_code=403, detail='Invalid signature')
+        if not is_valid_signature(body, signature):
+            raise HTTPException(status_code=403, detail='Invalid signature')
 
         # Check if the event is a push to the main branch
         if is_main_branch_push(payload):
