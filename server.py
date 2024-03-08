@@ -50,8 +50,10 @@ async def webhook(request: Request):
             # Update Docker Compose file with the commit hash
             update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
 
-            send_message_to_default_channel(GUILD_NAME)
+            await send_message_to_default_channel(GUILD_NAME, generate_notification_message(payload))
             return {'message': 'Docker Compose file updated successfully'}
+        else:
+            return {'message': 'No action required'}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -68,6 +70,25 @@ def is_valid_signature(data, signature):
     expected_signature = f"sha1={hmac_digest}"
 
     return hmac.compare_digest(signature, expected_signature)
+
+def generate_notification_message(payload):
+    try:
+        repository_name = payload['repository']['name']
+        action_type = "Push" if 'commits' in payload else "Pull Request"
+        branch = payload['ref'].split('/')[-1]
+        commit_message = payload['head_commit']['message']
+        commit_url = payload['head_commit']['url']
+        sender_username = payload['sender']['login']
+
+        message = f"New {action_type} in repository '{repository_name}':\n"
+        message += f"Branch: {branch}\n"
+        message += f"Commit Message: {commit_message}\n"
+        message += f"Commit URL: {commit_url}\n"
+        message += f"Triggered by: {sender_username}"
+
+        return message
+    except Exception as e:
+        return f"Error generating notification: {str(e)}"
 
 if __name__ == '__main__':
     uvicorn.run(app, port=8080)
