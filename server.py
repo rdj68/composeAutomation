@@ -38,30 +38,29 @@ async def webhook(request: Request,
     if x_github_event != 'push':
         raise HTTPException(status_code=400, detail='Invalid event type')
 
-    try:
-        # Decode the URL-encoded payload
-        body = await request.body()
-        payload = await request.json()
 
-        # Validate the GitHub webhook signature
-        if x_hub_signature and not is_valid_signature(body, x_hub_signature):
-            raise HTTPException(status_code=403, detail='Invalid signature')
+    # Decode the URL-encoded payload
+    body = await request.body()
+    payload = await request.json()
+    print(payload, body)
 
-        # Check if the event is a push to the main branch
-        if is_main_branch_push(payload):
-            commit_hash_after = payload['after']
-            commit_hash_before = payload['before']
 
-            # Update Docker Compose file with the commit hash
-            update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
+    # Validate the GitHub webhook signature
+    if x_hub_signature and not is_valid_signature(body, x_hub_signature):
+        raise HTTPException(status_code=403, detail='Invalid signature')
+    print("is_valid_signature")
+    # Check if the event is a push to the main branch
+    if is_main_branch_push(payload):
+        commit_hash_after = payload['after']
+        commit_hash_before = payload['before']
 
-            await send_message_to_default_channel(GUILD_NAME, generate_notification_message(payload))
-            return {'message': 'Docker Compose file updated successfully'}
-        else:
-            return {'message': 'No action required'}
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        # Update Docker Compose file with the commit hash
+        update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
+
+        await send_message_to_default_channel(GUILD_NAME, generate_notification_message(payload))
+        return {'message': 'Docker Compose file updated successfully'}
+    else:
+        return {'message': 'No action required'}
     
     
 def is_main_branch_push(payload):
