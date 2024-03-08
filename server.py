@@ -24,14 +24,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-
 SECRET = os.environ.get('WEBHOOK_SECRET')
 DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
 GUILD_NAME = os.environ.get('GUILD_NAME')
-
-app = FastAPI()
-
-SECRET = "your_github_webhook_secret"  # Replace with your GitHub webhook secret
 
 @app.post('/webhook')
 async def webhook(request: Request):
@@ -42,7 +37,7 @@ async def webhook(request: Request):
     body = await request.body()
     
     # Validate the GitHub webhook signature
-    if not is_valid_signature(request.body(), signature):
+    if not is_valid_signature(body, signature):
         raise HTTPException(status_code=403, detail='Invalid signature')
 
     # Parse the JSON payload directly
