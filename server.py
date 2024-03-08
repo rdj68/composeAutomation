@@ -72,7 +72,7 @@ def is_valid_signature(data, signature):
         return False
 
     # Calculate HMAC digest
-    hmac_digest = hmac.new(bytes(SECRET, 'utf-8'), data, hashlib.sha1).hexdigest()
+    hmac_digest = hmac.new(bytes(SECRET, 'utf-8'), data.encode('utf-8'), hashlib.sha1).hexdigest()
     expected_signature = f"sha1={hmac_digest}"
 
     return hmac.compare_digest(signature, expected_signature)
