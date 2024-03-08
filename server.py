@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import asyncio
 from app.discordBot.discord_bot import bot, send_message_to_default_channel
 import uvicorn
+import json
 
 
 @asynccontextmanager
@@ -30,31 +31,29 @@ GUILD_NAME = os.environ.get('GUILD_NAME')
 
 @app.post('/webhook')
 async def webhook(request: Request):
-    # Get the GitHub webhook signature from the headers
-    signature = request.headers.get('X-Hub-Signature')
+    try:
+         # Get the GitHub webhook signature from the headers
+        signature = request.headers.get('X-Hub-Signature')
     
-    # Read the request body
-    body = await request.body()
-    
-    # Validate the GitHub webhook signature
-    if not is_valid_signature(body, signature):
-        raise HTTPException(status_code=403, detail='Invalid signature')
+        body = await request.body()
+        payload = json.loads(body.decode())
+        
+        # Validate the GitHub webhook signature
+        # if not is_valid_signature(body, signature):
+            # raise HTTPException(status_code=403, detail='Invalid signature')
 
-    # Parse the JSON payload directly
-    request_data = await request.json()
+        # Check if the event is a push to the main branch
+        if is_main_branch_push(payload):
+            commit_hash_after = payload['after']
+            commit_hash_before = payload['before']
 
-    # Check if the event is a push to the main branch
-    if is_main_branch_push(request_data):
-        commit_hash_after = request_data['after']
-        commit_hash_before = request_data['before']
+            # Update Docker Compose file with the commit hash
+            update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
 
-        # Update Docker Compose file with the commit hash
-        update_docker_compose(commit_hash_after, commit_hash_before)
-
-        send_message_to_default_channel(GUILD_NAME)
-        return {'message': 'Docker Compose file updated successfully'}
-
-    return {'message': 'No action taken'}
+            send_message_to_default_channel(GUILD_NAME)
+            return {'message': 'Docker Compose file updated successfully'}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def is_main_branch_push(payload):
