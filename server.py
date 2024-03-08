@@ -25,7 +25,6 @@ app = FastAPI(lifespan=lifespan)
 
 
 SECRET = os.environ.get('WEBHOOK_SECRET')
-RESTART_SECRET = os.environ.get('RESTART_SECRET')
 DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
 GUILD_NAME = os.environ.get('GUILD_NAME')
 
@@ -43,7 +42,7 @@ async def webhook(request_data: dict):
         # Update Docker Compose file with the commit hash
         update_docker_compose(commit_hash_after, commit_hash_before)
         
-        send_message_to_default_channel()
+        send_message_to_default_channel(GUILD_NAME)
         return WebhookResponse(message='Docker Compose file updated successfully')
 
     # Return a response using the Pydantic model
