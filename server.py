@@ -18,9 +18,9 @@ async def lifespan(app: FastAPI):
     global GUILD_NAME
     GUILD_NAME = os.environ.get('GUILD_NAME')
     global SECRET 
-    SECRET = "bc6643c0767807da45dcfe754b5e7d3e98298c2d93a4c35a4e47d225e417c6c3"
+    SECRET = os.environ.get('WEBHOOK_SECRET')
     global DOCKER_COMPOSE_PATH
-    DOCKER_COMPOSE_PATH = "./docker-compose.yml"
+    DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
     global BOT_TOKEN
     BOT_TOKEN = os.environ.get('BOT_TOKEN')
     
