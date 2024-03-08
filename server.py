@@ -15,8 +15,6 @@ async def lifespan(app: FastAPI):
     print("Starting Discord bot")
     load_dotenv()
     
-    global GUILD_NAME
-    GUILD_NAME = os.environ.get('GUILD_NAME')
     global SECRET 
     SECRET = os.environ.get('WEBHOOK_SECRET')
     global DOCKER_COMPOSE_PATH
@@ -36,7 +34,6 @@ app = FastAPI(lifespan=lifespan)
 async def webhook(request: Request,
     x_github_event: str = Header(...),
     x_hub_signature: str = Header(...)):
-    print(SECRET, DOCKER_COMPOSE_PATH, BOT_TOKEN, GUILD_NAME)
     
     if x_github_event == 'ping':
         return {'message': 'GitHub Webhook received successfully'}
@@ -63,7 +60,7 @@ async def webhook(request: Request,
         # Update Docker Compose file with the commit hash
         update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
 
-        await send_message_to_default_channel(GUILD_NAME, generate_notification_message(payload))
+        await send_message_to_default_channel(os.environ.get('GUILD_NAME'), generate_notification_message(payload))
         return {'message': 'Docker Compose file updated successfully'}
     else:
         return {'message': 'No action required'}

@@ -16,6 +16,14 @@ async def restart(ctx):
     guild_name = os.environ.get('GUILD_NAME')
     success_info = restart_docker_compose(os.environ.get('DOCKER_COMPOSE_PATH'))
     await send_message_to_default_channel(guild_name, success_info)
+    
+# The login command sets the GUILD_NAME environment variable to the name of the guild (server) where the bot will operate.
+@bot.command(name='login')
+async def login(ctx, login_pass: str):
+    if login_pass == os.environ.get('LOGIN_PASS'):
+        guild_name = ctx.guild.name
+        os.environ['GUILD_NAME'] = guild_name
+        await ctx.send(f'Logged in as {guild_name}')
 
 @bot.event
 async def on_ready():
