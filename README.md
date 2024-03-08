@@ -20,6 +20,7 @@ To use `dockercomposeautomation`, you need to set up the following environment v
 - `DOCKER_COMPOSE_PATH`: Path to the Docker Compose file that will be updated.
 - `GUILD_NAME`: Name of the Discord server (guild) where the bot will operate.
 - `WEBHOOK_SECRET`: Secret key for securing the GitHub webhook endpoint.
+- `LOGIN_PASS` : secret used to login to guild since currently the bot only maintains one server
 
 ## Usage
 
