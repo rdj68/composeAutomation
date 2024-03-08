@@ -55,6 +55,7 @@ async def webhook(request: Request):
         else:
             return {'message': 'No action required'}
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
