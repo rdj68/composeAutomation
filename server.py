@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from urllib.parse import unquote
 from fastapi import FastAPI, HTTPException
 import hmac
 import hashlib
@@ -32,23 +33,26 @@ GUILD_NAME = os.environ.get('GUILD_NAME')
 @app.post('/webhook')
 async def webhook(request: Request):
     try:
-         # Get the GitHub webhook signature from the headers
+        # Get the GitHub webhook signature from the headers
         signature = request.headers.get('X-Hub-Signature')
         print(signature)
+        
+        # Decode the URL-encoded payload
         body = await request.body()
-        print(body)
-        print ("body received", request)
-        payload = json.loads(body.decode())
-        print ("payload validated")
+        payload = json.loads(unquote(body.decode()))
+        print("payload validated")
+
         # Validate the GitHub webhook signature
         if not is_valid_signature(body, signature):
             raise HTTPException(status_code=403, detail='Invalid signature')
-        print ("signature validated")
+        print("signature validated")
+
         # Check if the event is a push to the main branch
         if is_main_branch_push(payload):
             commit_hash_after = payload['after']
             commit_hash_before = payload['before']
-            print ("main branch push")
+            print("main branch push")
+
             # Update Docker Compose file with the commit hash
             update_docker_compose(commit_hash_after, commit_hash_before, DOCKER_COMPOSE_PATH)
 
@@ -59,8 +63,6 @@ async def webhook(request: Request):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
-
-
 def is_main_branch_push(payload):
     return (payload['ref'] == 'refs/heads/main' or payload['ref'] == 'refs/heads/master') and payload['after']
 
