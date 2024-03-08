@@ -48,13 +48,13 @@ async def webhook(request: Request,
     # Decode the URL-encoded payload
     body = await request.body()
     payload = await request.json()
-    print(payload, body)
+
 
 
     # Validate the GitHub webhook signature
-    if x_hub_signature and not is_valid_signature(body, x_hub_signature):
+    if x_hub_signature and not is_valid_github_signature(body, x_hub_signature):
         raise HTTPException(status_code=403, detail='Invalid signature')
-    print("is_valid_signature")
+
     # Check if the event is a push to the main branch
     if is_main_branch_push(payload):
         commit_hash_after = payload['after']
@@ -73,15 +73,25 @@ def is_main_branch_push(payload):
     default_branch = payload['repository']['default_branch']
     return "ref" in payload and  payload['ref'] == f'refs/heads/{default_branch}'
 
-def is_valid_signature(data, signature):
-    if not signature:
+async def is_valid_github_signature(
+    body: bytes,
+    received_signature: str
+) -> bool:
+    # Convert the secret to bytes (if it's not already)
+    secret_bytes = SECRET.encode('utf-8')
+
+    # Ensure the signature is in the expected format
+    if not received_signature.startswith("sha1="):
         return False
 
-    # Calculate HMAC digest
-    hmac_digest = hmac.new(bytes(SECRET, 'utf-8'), data, hashlib.sha1).hexdigest()
-    expected_signature = f"sha1={hmac_digest}"
+    # Extract the actual hash value from the signature
+    expected_hash = received_signature[5:]
 
-    return hmac.compare_digest(signature, expected_signature)
+    # Calculate the HMAC digest using the provided secret
+    hmac_digest = hmac.new(secret_bytes, body, hashlib.sha1).hexdigest()
+
+    # Compare the calculated hash with the expected hash
+    return hmac.compare_digest(expected_hash, hmac_digest)
 
 def generate_notification_message(payload):
     try:
