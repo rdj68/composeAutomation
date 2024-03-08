@@ -1,20 +1,33 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 import hmac
 import hashlib
 import os
-from schemas.webhook import WebhookResponse
-from schemas.restart import RestartResponse, RestartReq
-from controllers.dockerCompose import update_docker_compose, restart_docker_compose
+from app.schemas.webhook import WebhookResponse
+from app.controllers.dockerCompose import update_docker_compose
 from dotenv import load_dotenv
+import asyncio
+from app.discordBot.discord_bot import bot, send_message_to_default_channel
+import uvicorn
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting Discord bot")
+    load_dotenv()
+    
+    BOT_TOKEN = os.environ.get('BOT_TOKEN')
+    asyncio.create_task(bot.start(BOT_TOKEN))
+    yield
+    print("Stopping Discord bot")
 
-# Load env file and get the secret from the environment variable
-load_dotenv()
+app = FastAPI(lifespan=lifespan)
+
+
 SECRET = os.environ.get('WEBHOOK_SECRET')
 RESTART_SECRET = os.environ.get('RESTART_SECRET')
 DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
+GUILD_NAME = os.environ.get('GUILD_NAME')
 
 @app.post('/webhook', response_model=WebhookResponse)
 async def webhook(request_data: dict):
@@ -27,37 +40,27 @@ async def webhook(request_data: dict):
         commit_hash_after = request_data['after']  # Extract commit hash
         commit_hash_before = request_data['before']  # Extract commit hash
 
-        #Update Docker Compose file with the commit hash
+        # Update Docker Compose file with the commit hash
         update_docker_compose(commit_hash_after, commit_hash_before)
+        
+        send_message_to_default_channel()
         return WebhookResponse(message='Docker Compose file updated successfully')
 
     # Return a response using the Pydantic model
     return WebhookResponse(message='No action taken')
 
-@app.post('/restart', response_model=RestartResponse)
-async def restart(req: RestartReq):
-    # Check if the secret is correct
-    if req.secret != RESTART_SECRET:
-        raise HTTPException(status_code=403, detail='Invalid secret')
-
-    # Restart the Docker Compose services
-    restart_docker_compose()
-    return RestartResponse(message='Docker Compose services restarted successfully', success=True)
 
 def is_main_branch_push(payload):
-    return payload['ref'] == 'refs/heads/main' and payload['after']
+    return (payload['ref'] == 'refs/heads/main' or 'refs/heads/master') and payload['after']
 
 def is_valid_signature(data, signature):
     if not signature:
         return False
-
     hmac_digest = hmac.new(bytes(SECRET, 'utf-8'), data, hashlib.sha1).hexdigest()
     expected_signature = f"sha1={hmac_digest}"
 
     return hmac.compare_digest(signature, expected_signature)
-
+    
 
 if __name__ == '__main__':
-    import uvicorn
-
-    uvicorn.run(app, host='0.0.0.0', port=5000)
+    uvicorn.run(app, port=8080)

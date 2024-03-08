@@ -8,6 +8,8 @@ fastapi = "*"
 python-dotenv = "*"
 pydantic = "*"
 uvicorn = "*"
+"discord.py" = "*"
+flock = "*"
 
 [dev-packages]
 
