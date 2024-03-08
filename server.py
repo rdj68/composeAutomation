@@ -18,9 +18,9 @@ async def lifespan(app: FastAPI):
     global GUILD_NAME
     GUILD_NAME = os.environ.get('GUILD_NAME')
     global SECRET 
-    SECRET = os.environ.get('WEBHOOK_SECRET')
+    SECRET = "bc6643c0767807da45dcfe754b5e7d3e98298c2d93a4c35a4e47d225e417c6c3"
     global DOCKER_COMPOSE_PATH
-    DOCKER_COMPOSE_PATH = os.environ.get('DOCKER_COMPOSE_PATH')
+    DOCKER_COMPOSE_PATH = "./docker-compose.yml"
     global BOT_TOKEN
     BOT_TOKEN = os.environ.get('BOT_TOKEN')
     
@@ -52,8 +52,8 @@ async def webhook(request: Request,
 
 
     # Validate the GitHub webhook signature
-    if x_hub_signature and not is_valid_github_signature(body, x_hub_signature):
-        raise HTTPException(status_code=403, detail='Invalid signature')
+    # if x_hub_signature and not is_valid_github_signature(body, x_hub_signature):
+        # raise HTTPException(status_code=403, detail='Invalid signature')
 
     # Check if the event is a push to the main branch
     if is_main_branch_push(payload):
@@ -73,7 +73,7 @@ def is_main_branch_push(payload):
     default_branch = payload['repository']['default_branch']
     return "ref" in payload and  payload['ref'] == f'refs/heads/{default_branch}'
 
-async def is_valid_github_signature(
+def is_valid_github_signature(
     body: bytes,
     received_signature: str
 ) -> bool:

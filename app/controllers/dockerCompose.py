@@ -2,7 +2,7 @@ import subprocess
 import flock 
 
 def update_docker_compose(commit_hash_after, commit_hash_before, docker_compose_path):
-    try:
+
         # Read the current Docker Compose file content
         with open(docker_compose_path, 'r') as f:
             docker_compose_content = f.read()
@@ -14,11 +14,9 @@ def update_docker_compose(commit_hash_after, commit_hash_before, docker_compose_
 
         print(updated_content)
         # Write the updated content back to the Docker Compose file
-        with flock.Flock(docker_compose_path, flock.LOCK_EX):
-            with open(docker_compose_path, 'w') as f:
-                f.write(updated_content)
-    except Exception as e:
-        print(f'Error updating Docker Compose file: {e}')
+        with open(docker_compose_path, 'w') as f:
+            f.write(updated_content)
+
         
 def restart_docker_compose(docker_compose_path: str) -> str:
     try:
