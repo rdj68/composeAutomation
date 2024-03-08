@@ -39,7 +39,7 @@ async def webhook(request: Request):
         
         # Decode the URL-encoded payload
         body = await request.body()
-        payload = request.json()
+        payload = await request.json()
         print("payload validated")
 
         # Validate the GitHub webhook signature
